@@ -4,18 +4,18 @@
 #include <cassert>
 
 namespace {
-int32_t CompileShader(const char* shader, ShaderType type) {
+int32_t CompileShader(const char *shader, ShaderType type) {
   int32_t id = -1;
   switch (type) {
-    case ShaderType::GEOMETRY: {
-      id = glCreateShader(GL_GEOMETRY_SHADER);
-    } break;
-    case ShaderType::FRAGMENT: {
-      id = glCreateShader(GL_FRAGMENT_SHADER);
-    } break;
-    case ShaderType::VERTEX: {
-      id = glCreateShader(GL_VERTEX_SHADER);
-    } break;
+  case ShaderType::GEOMETRY: {
+    id = glCreateShader(GL_GEOMETRY_SHADER);
+  } break;
+  case ShaderType::FRAGMENT: {
+    id = glCreateShader(GL_FRAGMENT_SHADER);
+  } break;
+  case ShaderType::VERTEX: {
+    id = glCreateShader(GL_VERTEX_SHADER);
+  } break;
   }
   glShaderSource(id, 1, &shader, NULL);
   glCompileShader(id);
@@ -30,7 +30,7 @@ int32_t CompileShader(const char* shader, ShaderType type) {
   }
   return id;
 }
-}  // namespace
+} // namespace
 Mat4 Camera::GetProjectionMatrix(size_t width, size_t height) const {
   const float farClip = farClipRatio * lengthScale;
   const float nearClip = nearClipRatio * lengthScale;
@@ -39,7 +39,7 @@ Mat4 Camera::GetProjectionMatrix(size_t width, size_t height) const {
   return Perspective(fovRad, aspectRatio, nearClip, farClip);
 }
 
-void Camera::FitBBox(const BBox& box) {
+void Camera::FitBBox(const BBox &box) {
   center = box.Center();
   lengthScale = Length(box.max - box.min);
 
@@ -53,7 +53,7 @@ void Camera::FitBBox(const BBox& box) {
   farClipRatio = DEFAULT_FAR_CLIP;
 }
 
-void Camera::GetFrame(Vec3f& look, Vec3f& up, Vec3f& right) const {
+void Camera::GetFrame(Vec3f &look, Vec3f &up, Vec3f &right) const {
   Mat3 r = {};
   for (int i = 0; i < 3; i++) {
     for (int j = 0; j < 3; j++) {
@@ -111,8 +111,8 @@ void Camera::Translate(Vec2f delta) {
   viewMatrix = camSpaceT * viewMatrix;
 }
 
-void Program::Init(const char* geometry, const char* vertex,
-                   const char* fragment) {
+void Program::Init(const char *geometry, const char *vertex,
+                   const char *fragment) {
   int32_t gsId = -1, vsId = -1, fsId = -1;
   if (geometry) {
     gsId = CompileShader(geometry, ShaderType::GEOMETRY);
@@ -138,9 +138,12 @@ void Program::Init(const char* geometry, const char* vertex,
   }
   id = glCreateProgram();
 
-  if (gsId >= 0) glAttachShader(id, gsId);
-  if (fsId >= 0) glAttachShader(id, fsId);
-  if (vsId >= 0) glAttachShader(id, vsId);
+  if (gsId >= 0)
+    glAttachShader(id, gsId);
+  if (fsId >= 0)
+    glAttachShader(id, fsId);
+  if (vsId >= 0)
+    glAttachShader(id, vsId);
   glLinkProgram(id);
 
   GLint success = 0;
@@ -152,9 +155,12 @@ void Program::Init(const char* geometry, const char* vertex,
     glGetProgramInfoLog(id, sizeof(temp), NULL, temp);
     assert(false);
   }
-  if (gsId >= 0) glDeleteShader(gsId);
-  if (fsId >= 0) glDeleteShader(fsId);
-  if (vsId >= 0) glDeleteShader(vsId);
+  if (gsId >= 0)
+    glDeleteShader(gsId);
+  if (fsId >= 0)
+    glDeleteShader(fsId);
+  if (vsId >= 0)
+    glDeleteShader(vsId);
 
   if (success) {
     if (geometry) {
@@ -176,7 +182,7 @@ uint32_t GenerateTexture() {
 }
 
 void UpdateTexture(uint32_t textureId, size_t width, size_t height,
-                   Color* rgbaData) {
+                   Color *rgbaData) {
   glBindTexture(GL_TEXTURE_2D, textureId);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
@@ -187,7 +193,7 @@ void UpdateTexture(uint32_t textureId, size_t width, size_t height,
                GL_UNSIGNED_BYTE, rgbaData);
 }
 
-MeshRenderInfo::MeshRenderInfo(Mesh& mesh) {
+MeshRenderInfo::MeshRenderInfo(Mesh &mesh) {
   const std::vector<Vec3f> vertexNormals =
       CalculateVertexNormals(mesh, BuildConnectivity(mesh));
 
@@ -206,7 +212,7 @@ MeshRenderInfo::MeshRenderInfo(Mesh& mesh) {
     vertices[i].normal = vertexNormals[i];
   }
 
-  const uint32_t* indicies = (const uint32_t*)(mesh.faces.data());
+  const uint32_t *indicies = (const uint32_t *)(mesh.faces.data());
 
   {
     uint32_t bufferId = 0;
@@ -228,10 +234,10 @@ MeshRenderInfo::MeshRenderInfo(Mesh& mesh) {
   glBufferData(GL_ARRAY_BUFFER, verticesCount * sizeof(VertexInfo),
                vertices.data(), GL_STATIC_DRAW);
   glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(VertexInfo),
-                        (void*)offsetof(VertexInfo, position));
+                        (void *)offsetof(VertexInfo, position));
   glEnableVertexAttribArray(0);
   glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(VertexInfo),
-                        (void*)offsetof(VertexInfo, normal));
+                        (void *)offsetof(VertexInfo, normal));
   glEnableVertexAttribArray(1);
   glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, elementBufferId);
   glBufferData(GL_ELEMENT_ARRAY_BUFFER, facesCount * sizeof(Mesh::Triangle),
@@ -239,8 +245,8 @@ MeshRenderInfo::MeshRenderInfo(Mesh& mesh) {
   glBindVertexArray(0);
 }
 
-void RenderMesh(const RenderBuffer& buffer, const Program& program,
-                const MeshRenderInfo& info) {
+void RenderMesh(const RenderBuffer &buffer, const Program &program,
+                const MeshRenderInfo &info) {
   glBindFramebuffer(GL_FRAMEBUFFER, buffer.frameBufferId);
   glUseProgram(program.id);
   glBindVertexArray(info.vertexBufferObject);
@@ -281,7 +287,7 @@ void RenderBuffer::Init(size_t w, size_t h) {
   glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, width, height);
   glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT,
                             GL_RENDERBUFFER,
-                            renderBufferId);  // now actually attach it
+                            renderBufferId); // now actually attach it
   // now that we actually created the framebuffer and added all attachments we
   // want to check if it is actually complete now
   if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
@@ -311,13 +317,13 @@ void RenderBuffer::Clear(Color c) {
   glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }
 
-void Program::SetUniformV3f(const char* name, const float data[3]) const {
+void Program::SetUniformV3f(const char *name, const float data[3]) const {
   glUseProgram(id);
   glUniform3f(glGetUniformLocation(id, name), data[0], data[1], data[2]);
   glUseProgram(0);
 }
 
-void Program::SetUniformM4x4f(const char* name, const float data[16]) const {
+void Program::SetUniformM4x4f(const char *name, const float data[16]) const {
   glUseProgram(id);
   glUniformMatrix4fv(glGetUniformLocation(id, name), 1, GL_FALSE, data);
   glUseProgram(0);

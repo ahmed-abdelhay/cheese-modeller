@@ -5,29 +5,25 @@
 #include <chrono>
 #include <cstdio>
 
-template <typename F>
-struct privDefer {
+template <typename F> struct privDefer {
   F f;
   privDefer(F f) : f(f) {}
   ~privDefer() { f(); }
 };
-template <typename F>
-privDefer<F> defer_func(F f) {
-  return privDefer<F>(f);
-}
+template <typename F> privDefer<F> defer_func(F f) { return privDefer<F>(f); }
 #define DEFER_1(x, y) x##y
 #define DEFER_2(x, y) DEFER_1(x, y)
 #define DEFER_3(x) DEFER_2(x, __COUNTER__)
 #define defer(code) auto DEFER_3(_defer_) = defer_func([&]() { code; })
 
 //-----------------------Time  -------------------------------//
-#define TIME_BLOCK(BlockName)                              \
-  StopWatch _t;                                            \
-  _t.Start();                                              \
-  defer({                                                  \
-    _t.Stop();                                             \
-    printf("Time spent in (%s): %f seconds.\n", BlockName, \
-           _t.ElapsedSeconds());                           \
+#define TIME_BLOCK(BlockName)                                                  \
+  StopWatch _t;                                                                \
+  _t.Start();                                                                  \
+  defer({                                                                      \
+    _t.Stop();                                                                 \
+    printf("Time spent in (%s): %f seconds.\n", BlockName,                     \
+           _t.ElapsedSeconds());                                               \
   });
 
 struct StopWatch {
@@ -46,12 +42,6 @@ constexpr double PI = 3.14159265358979323846264338327950288;
 inline double Deg2Rad(double v) { return v * (PI / 180); }
 inline double Rad2Deg(double v) { return v * (180 / PI); }
 
-// SDF
-inline float SdfUnion(float a, float b) { return (std::min)(a, b); }
-inline float SdfIntersection(float a, float b) { return (std::max)(a, b); }
-inline float SdfDifference(float a, float b) { return (std::max)(a, -b); }
-inline float pow2(float x) { return x * x; }
-
 float GenerateRandomNumberInRange(float min, float max);
 
 union Vec2f {
@@ -66,16 +56,16 @@ union Vec2f {
     assert(i < 2);
     return data[i];
   }
-  float& operator[](size_t i) {
+  float &operator[](size_t i) {
     assert(i < 2);
     return data[i];
   }
-  Vec2f operator+(const Vec2f& b) const { return Vec2f{x + b.x, y + b.y}; }
-  Vec2f operator-(const Vec2f& b) const { return Vec2f{x - b.x, y - b.y}; }
-  Vec2f operator*(const Vec2f& b) const { return Vec2f{x * b.x, y * b.y}; }
+  Vec2f operator+(const Vec2f &b) const { return Vec2f{x + b.x, y + b.y}; }
+  Vec2f operator-(const Vec2f &b) const { return Vec2f{x - b.x, y - b.y}; }
+  Vec2f operator*(const Vec2f &b) const { return Vec2f{x * b.x, y * b.y}; }
   Vec2f operator*(float s) const { return Vec2f{x * s, y * s}; }
-  bool operator==(const Vec2f& b) const { return x == b.x && y == b.y; }
-  bool operator!=(const Vec2f& b) const { return x != b.x || y != b.y; }
+  bool operator==(const Vec2f &b) const { return x == b.x && y == b.y; }
+  bool operator!=(const Vec2f &b) const { return x != b.x || y != b.y; }
 };
 
 struct Vec3f {
@@ -89,27 +79,27 @@ struct Vec3f {
     assert(i < 3);
     return data[i];
   }
-  float& operator[](size_t i) {
+  float &operator[](size_t i) {
     assert(i < 3);
     return data[i];
   }
-  Vec3f operator+(const Vec3f& b) const {
+  Vec3f operator+(const Vec3f &b) const {
     return Vec3f{x + b.x, y + b.y, z + b.z};
   }
-  Vec3f operator-(const Vec3f& b) const {
+  Vec3f operator-(const Vec3f &b) const {
     return Vec3f{x - b.x, y - b.y, z - b.z};
   }
-  Vec3f operator*(const Vec3f& b) const {
+  Vec3f operator*(const Vec3f &b) const {
     return Vec3f{x * b.x, y * b.y, z * b.z};
   }
-  Vec3f operator/(const Vec3f& b) const {
+  Vec3f operator/(const Vec3f &b) const {
     return Vec3f{x / b.x, y / b.y, z / b.z};
   }
   Vec3f operator*(float s) const { return Vec3f{x * s, y * s, z * s}; }
-  bool operator==(const Vec3f& b) const {
+  bool operator==(const Vec3f &b) const {
     return x == b.x && y == b.y && z == b.z;
   }
-  bool operator!=(const Vec3f& b) const {
+  bool operator!=(const Vec3f &b) const {
     return x != b.x || y != b.y || z != b.z;
   }
   size_t Hash() const {
@@ -125,7 +115,7 @@ struct Vec3f {
 };
 
 struct Vec3fHash {
-  size_t operator()(const Vec3f& v) const { return v.Hash(); }
+  size_t operator()(const Vec3f &v) const { return v.Hash(); }
 };
 
 /*
@@ -134,7 +124,7 @@ struct Vec3fHash {
 */
 inline Vec3f Lerp(float isolevel, Vec3f p1, Vec3f p2, float valp1,
                   float valp2) {
-  constexpr float EPS = 0.00001;
+  constexpr float EPS = 1e-7;
   if (fabs(isolevel - valp1) < EPS) {
     return p1;
   }
@@ -156,7 +146,7 @@ struct Mat3 {
     float elements[3][3];
     float data[9];
   };
-  Vec3f operator*(const Vec3f& v) const;
+  Vec3f operator*(const Vec3f &v) const;
 };
 
 struct Mat4 {
@@ -164,7 +154,7 @@ struct Mat4 {
     float elements[4][4];
     float data[16];
   };
-  Mat4 operator*(const Mat4& right) const;
+  Mat4 operator*(const Mat4 &right) const;
 };
 
 struct BBox {
@@ -173,7 +163,7 @@ struct BBox {
 
   Vec3f Center() const { return (max + min) * 0.5f; }
   Vec3f Size() const { return max - min; }
-  void Merge(const Vec3f& v) {
+  void Merge(const Vec3f &v) {
     min.x = (std::min)(min.x, v.x);
     min.y = (std::min)(min.y, v.y);
     min.z = (std::min)(min.z, v.z);
@@ -181,7 +171,7 @@ struct BBox {
     max.y = (std::max)(max.y, v.y);
     max.z = (std::max)(max.z, v.z);
   }
-  void Merge(const BBox& b) {
+  void Merge(const BBox &b) {
     Merge(b.min);
     Merge(b.max);
   }
@@ -197,25 +187,33 @@ struct Segment2D {
   Vec2f start, end;
 };
 
-Vec3f CrossProduct(const Vec3f& a, const Vec3f& b);
+Vec3f CrossProduct(const Vec3f &a, const Vec3f &b);
 
-float DotProduct(const Vec3f& a, const Vec3f& b);
-float DotProduct(const Vec2f& a, const Vec2f& b);
+float DotProduct(const Vec3f &a, const Vec3f &b);
+float DotProduct(const Vec2f &a, const Vec2f &b);
 
-float Length(const Vec3f& v);
-float Length(const Vec2f& v);
+float Length(const Vec3f &v);
+float Length(const Vec2f &v);
 
-void Normalise(Vec3f& v);
-void Normalise(Vec2f& v);
+float Length2(const Vec3f &v);
+float Length2(const Vec2f &v);
 
-Vec3f Normalised(const Vec3f& v);
-Vec2f Normalised(const Vec2f& v);
+void Normalise(Vec3f &v);
+void Normalise(Vec2f &v);
+
+Vec3f Normalised(const Vec3f &v);
+Vec2f Normalised(const Vec2f &v);
 
 Mat4 Identity();
-Mat4 Translate(Mat4 m, const Vec3f& translation);
-Mat4 Rotate(const Mat4& m, double angle, const Vec3f& v);
+Mat4 Translate(Mat4 m, const Vec3f &translation);
+Mat4 Rotate(const Mat4 &m, double angle, const Vec3f &v);
 Mat4 Perspective(double fovy, double aspect, double zNear, double zFar);
-Mat4 LookAt(const Vec3f& eye, const Vec3f& center, const Vec3f& up);
+Mat4 LookAt(const Vec3f &eye, const Vec3f &center, const Vec3f &up);
 
 bool Intersect(const Vec3f planePt, const Vec3f planeN, const Vec3f p0,
-               const Vec3f p1, const Vec3f p2, Segment3D& out);
+               const Vec3f p1, const Vec3f p2, Segment3D &out);
+
+float PointToCylinderDistance(const Vec3f &p, const Vec3f &center, float radius,
+                              float height);
+float PointToCircleDistance(const Vec3f &p, const Vec3f &center, float radius);
+float PointToSphereDistance(const Vec3f &p, const Vec3f &center, float radius);

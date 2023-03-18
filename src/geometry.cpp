@@ -4,28 +4,28 @@
 #include <random>
 
 float GenerateRandomNumberInRange(float min, float max) {
-  std::random_device rd;   // obtain a random number from hardware
-  std::mt19937 gen(rd());  // seed the generator
-  std::uniform_int_distribution<> distr(min, max);  // define the range
+  std::random_device rd;  // obtain a random number from hardware
+  std::mt19937 gen(rd()); // seed the generator
+  std::uniform_int_distribution<> distr(min, max); // define the range
   return distr(gen);
 }
 
-float DotProduct(const Vec3f& a, const Vec3f& b) {
+float DotProduct(const Vec3f &a, const Vec3f &b) {
   return a.x * b.x + a.y * b.y + a.z * b.z;
 }
 
-float DotProduct(const Vec2f& a, const Vec2f& b) {
+float DotProduct(const Vec2f &a, const Vec2f &b) {
   return a.x * b.x + a.y * b.y;
 }
 
-Vec3f Mat3::operator*(const Vec3f& v) const {
+Vec3f Mat3::operator*(const Vec3f &v) const {
   const Vec3f v0{elements[0][0], elements[0][1], elements[0][2]};
   const Vec3f v1{elements[1][0], elements[1][1], elements[1][2]};
   const Vec3f v2{elements[2][0], elements[2][1], elements[2][2]};
   return Vec3f{DotProduct(v0, v), DotProduct(v1, v), DotProduct(v2, v)};
 }
 
-Mat4 Mat4::operator*(const Mat4& b) const {
+Mat4 Mat4::operator*(const Mat4 &b) const {
   Mat4 r = {};
   for (int i = 0; i < 4; ++i) {
     r.elements[0][i] =
@@ -44,41 +44,42 @@ Mat4 Mat4::operator*(const Mat4& b) const {
   return r;
 }
 
-Vec3f CrossProduct(const Vec3f& a, const Vec3f& b) {
+Vec3f CrossProduct(const Vec3f &a, const Vec3f &b) {
   return Vec3f{a.y * b.z - a.z * b.y, a.z * b.x - a.x * b.z,
                a.x * b.y - a.y * b.x};
 }
 
-float Length(const Vec2f& v) { return sqrt(v.x * v.x + v.y * v.y); }
+float Length(const Vec2f &v) { return sqrt(v.x * v.x + v.y * v.y); }
+float Length(const Vec3f &v) { return sqrt(v.x * v.x + v.y * v.y + v.z * v.z); }
+float Length2(const Vec2f &v) { return v.x * v.x + v.y * v.y; }
+float Length2(const Vec3f &v) { return v.x * v.x + v.y * v.y + v.z * v.z; }
 
-float Length(const Vec3f& v) { return sqrt(v.x * v.x + v.y * v.y + v.z * v.z); }
-
-void Normalise(Vec2f& v) {
+void Normalise(Vec2f &v) {
   const double length = Length(v);
   v.x /= length;
   v.y /= length;
 }
 
-void Normalise(Vec3f& v) {
+void Normalise(Vec3f &v) {
   const double length = Length(v);
   v.x /= length;
   v.y /= length;
   v.z /= length;
 }
 
-Vec3f Normalised(const Vec3f& v) {
+Vec3f Normalised(const Vec3f &v) {
   Vec3f result = v;
   Normalise(result);
   return result;
 }
 
-Vec2f Normalised(const Vec2f& v) {
+Vec2f Normalised(const Vec2f &v) {
   Vec2f result = v;
   Normalise(result);
   return result;
 }
 
-Mat4 Translate(Mat4 m, const Vec3f& v) {
+Mat4 Translate(Mat4 m, const Vec3f &v) {
   // m[3] = m[0] * v + m[1] * v + m[2] * v + m[3];
   for (int i = 0; i < 4; ++i) {
     m.elements[3][i] = m.elements[0][i] * v.data[0] +
@@ -88,7 +89,7 @@ Mat4 Translate(Mat4 m, const Vec3f& v) {
   return m;
 }
 
-Mat4 Rotate(const Mat4& m, double angle, const Vec3f& v) {
+Mat4 Rotate(const Mat4 &m, double angle, const Vec3f &v) {
   const double c = cos(angle);
   const double s = sin(angle);
 
@@ -148,7 +149,7 @@ Mat4 Identity() {
   return m;
 }
 
-Mat4 LookAt(const Vec3f& eye, const Vec3f& center, const Vec3f& up) {
+Mat4 LookAt(const Vec3f &eye, const Vec3f &center, const Vec3f &up) {
   const Vec3f f = Normalised(center - eye);
   const Vec3f s = Normalised(CrossProduct(f, up));
   const Vec3f u = CrossProduct(s, f);
@@ -183,7 +184,7 @@ Mat4 Perspective(double fovy, double aspect, double zNear, double zFar) {
 }
 
 bool Intersect(const Vec3f planePt, const Vec3f planeN, const Vec3f triA,
-               const Vec3f triB, const Vec3f triC, Segment3D& out)
+               const Vec3f triB, const Vec3f triC, Segment3D &out)
 
 {
   const float planeD = -DotProduct(planePt, planeN);
@@ -219,4 +220,25 @@ bool Intersect(const Vec3f planePt, const Vec3f planeN, const Vec3f triA,
   } else {
     return false;
   }
+}
+inline float pow2(float x) { return x * x; }
+
+float PointToCylinderDistance(const Vec3f &p, const Vec3f &c, float radius,
+                              float height) {
+  if (p.z >= 0 && p.z <= height) {
+    return pow2(p.x) + pow2(p.y) - pow2(radius);
+  }
+  return PointToCircleDistance(p, Vec3f{c.x, c.y, (p.z > height) ? height : 0},
+                               radius);
+}
+
+float PointToSphereDistance(const Vec3f &p, const Vec3f &c, float radius) {
+  return Length2(p - c) - pow2(radius);
+}
+
+float PointToCircleDistance(const Vec3f &p, const Vec3f &c, float radius) {
+  const float dist2Plane2 = pow2(p.z - c.z);
+  const float dist2Circle2 =
+      fabs(Length2(Vec2f{p.x, p.y} - Vec2f{c.x, c.y}) - pow2(radius));
+  return sqrt(dist2Circle2 + dist2Plane2);
 }

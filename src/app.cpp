@@ -10,7 +10,7 @@
 #include "graphics.h"
 
 // surface with wireframes shaders
-static const char* wires_fs = R"V0G0N(
+static const char *wires_fs = R"V0G0N(
 #version 330 core
 out vec4 FragColor;
 in vec3 dist;
@@ -31,7 +31,7 @@ void main()
 }
 )V0G0N";
 
-static const char* wires_vs = R"V0G0N(
+static const char *wires_vs = R"V0G0N(
 #version 330 core
 in vec4 position;
 void main()
@@ -40,7 +40,7 @@ void main()
 }
 )V0G0N";
 
-static const char* wires_gs = R"V0G0N(
+static const char *wires_gs = R"V0G0N(
 #version 330 core
 layout(triangles) in;
 layout(triangle_strip, max_vertices = 3) out;
@@ -87,28 +87,28 @@ struct SliceViewState {
 
   void Init() { textureId = GenerateTexture(); }
 
-  void SliceImage(const Image3D& sdf) {
-    Slice(sdf, orientation, index, image);
+  void SliceImage(const Image3D &sdf, bool globalRemap) {
+    Slice(sdf, orientation, index, image, globalRemap);
     UpdateTexture(textureId, image.size[0], image.size[1], image.data.data());
   }
 
-  void Render(const ImVec2 area, const Image3D& sdf) {
+  void Render(const ImVec2 area, const Image3D &sdf, bool globalRemap) {
     ImGui::BeginChild("slices", area);
     switch (orientation) {
-      case Orientation::X:
-        ImGui::TextColored(RED, "X");
-        break;
-      case Orientation::Y:
-        ImGui::TextColored(GREEN, "Y");
-        break;
-      case Orientation::Z:
-        ImGui::TextColored(BLUE, "Z");
-        break;
+    case Orientation::X:
+      ImGui::TextColored(RED, "X");
+      break;
+    case Orientation::Y:
+      ImGui::TextColored(GREEN, "Y");
+      break;
+    case Orientation::Z:
+      ImGui::TextColored(BLUE, "Z");
+      break;
     }
     ImGui::SameLine();
     ImGui::PushItemWidth(-1);
     if (ImGui::SliderInt("", &index, 0, maxIndex)) {
-      SliceImage(sdf);
+      SliceImage(sdf, globalRemap);
     }
     ImGui::Image((ImTextureID)(intptr_t)textureId,
                  ImGui::GetContentRegionAvail());
@@ -141,11 +141,12 @@ struct View3DState {
     }
   }
 
-  void Render(ImVec2 area, const Mesh& mesh) {
+  void Render(ImVec2 area, const Mesh &mesh) {
     if (ImGui::IsWindowFocused()) {
-      ImGuiIO& io = ImGui::GetIO();
+      ImGuiIO &io = ImGui::GetIO();
       // If any mouse button is pressed, trigger a redraw
-      if (ImGui::IsAnyMouseDown()) redraw = true;
+      if (ImGui::IsAnyMouseDown())
+        redraw = true;
 
       // Handle scroll events for 3D view
       {
@@ -176,9 +177,9 @@ struct View3DState {
             camera.Zoom(dragDelta.y * 5);
           }
           if (isRotate) {
-            const Vec2f currPos{
-                2.f * (io.MousePos.x / width) - 1.0f,
-                2.f * ((height - io.MousePos.y) / height) - 1.0f};
+            const Vec2f currPos{2.f * (io.MousePos.x / width) - 1.0f,
+                                2.f * ((height - io.MousePos.y) / height) -
+                                    1.0f};
             camera.Rotate(currPos - (dragDelta * 2.0f), currPos);
           }
           if (isTranslate) {
@@ -246,6 +247,7 @@ struct State {
     int direction = 2;
     int slicesCount = 20;
     bool showSlices = false;
+    bool globalRangeRemap = true;
     int sliceIndex = 0;
   } gui;
 
@@ -262,7 +264,7 @@ struct State {
   }
 
   void Update() {
-    ImGuiStyle& style = ImGui::GetStyle();
+    ImGuiStyle &style = ImGui::GetStyle();
     style.FrameRounding = style.GrabRounding = 12;
 
     ImGui::SetNextWindowPos(ImVec2(0, 0));
@@ -281,7 +283,7 @@ struct State {
       const ImVec2 viewsSize(0.5 * width, height * 0.8);
       ImGui::BeginGroup();
       ImGui::BeginChild("2D view", viewsSize);
-      sliceView.Render(viewsSize, sdfGrid);
+      sliceView.Render(viewsSize, sdfGrid, gui.globalRangeRemap);
       ImGui::EndChild();
       ImGui::SameLine();
       ImGui::BeginChild("3D View", viewsSize);
@@ -290,12 +292,12 @@ struct State {
           if (ImGui::SliderInt("Index", &gui.sliceIndex, 0,
                                slices.size() - 1)) {
           }
-          ImDrawList* draw_list = ImGui::GetWindowDrawList();
+          ImDrawList *draw_list = ImGui::GetWindowDrawList();
           const ImVec2 canvasPt = ImGui::GetCursorScreenPos();
           const ImVec2 canvasSize = ImGui::GetWindowSize();
           const ImU32 YELLOW = ImColor(255, 255, 0);
           const float thickness = 1.0f;
-          const auto& slice = slices[gui.sliceIndex];
+          const auto &slice = slices[gui.sliceIndex];
           const auto box = slice.box;
           const auto boxSize = slice.box.Size();
           for (const Segment2D s : slices[gui.sliceIndex].segments) {
@@ -371,15 +373,17 @@ struct State {
 
         sliceView.maxIndex = sdfGrid.size[2] - 1;
         sliceView.index = 0;
-        sliceView.SliceImage(sdfGrid);
+        sliceView.SliceImage(sdfGrid, gui.globalRangeRemap);
       }
       ImGui::SameLine();
       if (ImGui::Button("Slice")) {
-        slices = SliceCheese(mesh, gui.slicesCount, Orientation(gui.direction));
+        slices = Slice(mesh, gui.slicesCount, Orientation(gui.direction));
         gui.showSlices = true;
       }
       ImGui::SameLine();
       ImGui::Checkbox("Show slices", &gui.showSlices);
+      ImGui::SameLine();
+      ImGui::Checkbox("Global SDF slice remap", &gui.globalRangeRemap);
 
       ImGui::Text("Application average: %.1f FPS", ImGui::GetIO().Framerate);
       ImGui::EndChild();
@@ -388,23 +392,23 @@ struct State {
   }
 };
 
-int main(int argc, char** argv) {
+int main(int argc, char **argv) {
   // Setup window
   if (!glfwInit()) {
     return EXIT_FAILURE;
   }
   // GL 3.0 + GLSL 130
-  const char* glsl_version = "#version 130";
+  const char *glsl_version = "#version 130";
   glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
   glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 0);
 
   // Create window with graphics context
-  GLFWwindow* window = glfwCreateWindow(1280, 720, "Cheesoo", NULL, NULL);
+  GLFWwindow *window = glfwCreateWindow(1280, 720, "Cheesoo", NULL, NULL);
   if (!window) {
     return EXIT_FAILURE;
   }
   glfwMakeContextCurrent(window);
-  glfwSwapInterval(1);  // Enable vsync
+  glfwSwapInterval(1); // Enable vsync
 
   // Initialize OpenGL loader
   if (gl3wInit() != 0) {
@@ -414,7 +418,7 @@ int main(int argc, char** argv) {
   // Setup Dear ImGui context
   IMGUI_CHECKVERSION();
   ImGui::CreateContext();
-  ImGuiIO& io = ImGui::GetIO();
+  ImGuiIO &io = ImGui::GetIO();
 
   // Setup Dear ImGui style
   ImGui::StyleColorsDark();
@@ -424,7 +428,7 @@ int main(int argc, char** argv) {
   ImGui_ImplOpenGL3_Init(glsl_version);
 
   // Load Fonts
-  if (ImFont* font = io.Fonts->AddFontFromFileTTF("d:/Fira.ttf", 25.0f)) {
+  if (ImFont *font = io.Fonts->AddFontFromFileTTF("d:/Fira.ttf", 25.0f)) {
     io.FontDefault = font;
   }
 

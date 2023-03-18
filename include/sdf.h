@@ -27,7 +27,7 @@ struct ColorImage {
   inline size_t LinearIndex(size_t x, size_t y) const {
     return x + y * size[0];
   }
-  inline Color& At(size_t x, size_t y) { return data[LinearIndex(x, y)]; }
+  inline Color &At(size_t x, size_t y) { return data[LinearIndex(x, y)]; }
   inline Color At(size_t x, size_t y) const { return data[LinearIndex(x, y)]; }
 };
 
@@ -46,10 +46,10 @@ struct Image3D {
   inline size_t LinearIndex(size_t x, size_t y, size_t z) const {
     return x + y * size[0] + z * size[0] * size[1];
   }
-  inline float& At(size_t x, size_t y, size_t z) {
+  inline float &At(size_t x, size_t y, size_t z) {
     return data[LinearIndex(x, y, z)];
   }
-  inline const float& At(size_t x, size_t y, size_t z) const {
+  inline const float &At(size_t x, size_t y, size_t z) const {
     return data[LinearIndex(x, y, z)];
   }
 };
@@ -76,19 +76,22 @@ struct Connectivity {
   std::vector<VertexNeighbours> pointCells;
 };
 
+// SDF
+inline float SdfUnion(float a, float b) { return (std::min)(a, b); }
+inline float SdfIntersection(float a, float b) { return (std::max)(a, b); }
+inline float SdfDifference(float a, float b) { return (std::max)(a, -b); }
+
 struct Cheese {
-  const float poresRadius2 = 0;
+  const float poresRadius = 0;
   const float cylinderHeight = 0;
-  const float cylinderRadius2 = 0;
+  const float cylinderRadius = 0;
   std::vector<Vec3f> poresCenters;
 
   Cheese(int poresCount, float poresRadius, float cylinderHeight,
          float cylinderRadius)
-      : poresRadius2(pow2(poresRadius)),
-        cylinderHeight(cylinderHeight),
-        cylinderRadius2(pow2(cylinderRadius)),
-        poresCenters(poresCount) {
-    for (auto& pore : poresCenters) {
+      : poresRadius(poresRadius), cylinderHeight(cylinderHeight),
+        cylinderRadius(cylinderRadius), poresCenters(poresCount) {
+    for (auto &pore : poresCenters) {
       pore = Vec3f{GenerateRandomNumberInRange(-cylinderRadius, cylinderRadius),
                    GenerateRandomNumberInRange(-cylinderRadius, cylinderRadius),
                    GenerateRandomNumberInRange(0, cylinderHeight)};
@@ -96,34 +99,28 @@ struct Cheese {
   }
 
   float Eval(float x, float y, float z) const {
-    if (z >= 0 && z <= cylinderHeight) {
-      float poresUnion = FLT_MAX;
-      for (const auto& center : poresCenters) {
-        const float poreDist = pow2(x - center.x) + pow2(y - center.y) +
-                               pow2(z - center.z) - poresRadius2;
-        poresUnion = SdfUnion(poresUnion, poreDist);
-      }
-
-      const float cylinderDist = pow2(x) + pow2(y) - cylinderRadius2;
-      return SdfDifference(cylinderDist, poresUnion);
-    } else if (z > cylinderHeight) {  // approximate.
-      return z - cylinderHeight;
-    } else {
-      return -z;
+    float poresUnion = FLT_MAX;
+    const Vec3f p{x, y, z};
+    for (const auto &center : poresCenters) {
+      poresUnion =
+          SdfUnion(poresUnion, PointToSphereDistance(p, center, poresRadius));
     }
+    const float cylinderDist = PointToCylinderDistance(
+        p, Vec3f{0, 0, 0}, cylinderRadius, cylinderHeight);
+    return SdfDifference(cylinderDist, poresUnion);
   }
 };
 
-BBox CalculateBBox(const Mesh& mesh);
-std::vector<Vec3f> CalculateFacesNormals(const Mesh& mesh);
-Connectivity BuildConnectivity(const Mesh& mesh);
-std::vector<Vec3f> CalculateVertexNormals(const Mesh& m, const Connectivity& c);
-void Slice(const Image3D& image, Orientation dir, size_t id, ColorImage& out);
+BBox CalculateBBox(const Mesh &mesh);
+std::vector<Vec3f> CalculateFacesNormals(const Mesh &mesh);
+Connectivity BuildConnectivity(const Mesh &mesh);
+std::vector<Vec3f> CalculateVertexNormals(const Mesh &m, const Connectivity &c);
 
-Image3D CreateSDFGrid(const Cheese& cheese, const float min[3],
+Image3D CreateSDFGrid(const Cheese &cheese, const float min[3],
                       const float max[3], const float spacing[3]);
 
-Mesh MarchingCubes(const Image3D& image);
+Mesh MarchingCubes(const Image3D &image);
 
-std::vector<CheeseSlice> SliceCheese(const Mesh& mesh, size_t slicesCount,
-                                     Orientation direction);
+std::vector<CheeseSlice> Slice(const Mesh &mesh, size_t count, Orientation dir);
+void Slice(const Image3D &image, Orientation dir, size_t id, ColorImage &out,
+           bool globalRemap);

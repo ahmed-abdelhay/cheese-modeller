@@ -17,9 +17,9 @@ struct Program {
 
   // geometry shader pointers can be null, in that case it won't be added to the
   // output program.
-  void Init(const char* geometry, const char* vertet, const char* fragment);
-  void SetUniformV3f(const char* name, const float data[3]) const;
-  void SetUniformM4x4f(const char* name, const float data[16]) const;
+  void Init(const char *geometry, const char *vertet, const char *fragment);
+  void SetUniformV3f(const char *name, const float data[3]) const;
+  void SetUniformM4x4f(const char *name, const float data[16]) const;
 };
 
 struct RenderBuffer {
@@ -27,8 +27,8 @@ struct RenderBuffer {
   size_t height = 0;
   int32_t frameBufferId = -1;
   int32_t renderBufferId = -1;
-  int32_t textureId = -1;  // id of the texture used to store the 3d render
-                           // pipeline of the 3D view.
+  int32_t textureId = -1; // id of the texture used to store the 3d render
+                          // pipeline of the 3D view.
 
   void Init(size_t width, size_t height);
   void Reize(size_t width, size_t heigth);
@@ -45,7 +45,7 @@ struct MeshRenderInfo {
   size_t id;
 
   MeshRenderInfo() = default;
-  MeshRenderInfo(Mesh& mesh);
+  MeshRenderInfo(Mesh &mesh);
 };
 
 struct Camera {
@@ -62,8 +62,8 @@ struct Camera {
 
   Mat4 GetViewMatrix() const { return viewMatrix; }
   Mat4 GetProjectionMatrix(size_t width, size_t height) const;
-  void FitBBox(const BBox& box);
-  void GetFrame(Vec3f& look, Vec3f& up, Vec3f& right) const;
+  void FitBBox(const BBox &box);
+  void GetFrame(Vec3f &look, Vec3f &up, Vec3f &right) const;
   void Zoom(float amount);
   void Rotate(Vec2f start, Vec2f end);
   void Translate(Vec2f delta);
@@ -71,7 +71,7 @@ struct Camera {
 
 uint32_t GenerateTexture();
 void UpdateTexture(uint32_t textureId, size_t width, size_t height,
-                   Color* rgbaData);
+                   Color *rgbaData);
 
-void RenderMesh(const RenderBuffer& buffer, const Program& program,
-                const MeshRenderInfo& info);
+void RenderMesh(const RenderBuffer &buffer, const Program &program,
+                const MeshRenderInfo &info);

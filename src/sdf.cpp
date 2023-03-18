@@ -10,9 +10,9 @@ static size_t GenerateID() {
   static size_t id = 0;
   return id++;
 }
-}  // namespace
+} // namespace
 
-BBox CalculateBBox(const Mesh& mesh) {
+BBox CalculateBBox(const Mesh &mesh) {
   BBox result;
   for (const Vec3f v : mesh.vertices) {
     result.Merge(v);
@@ -20,13 +20,13 @@ BBox CalculateBBox(const Mesh& mesh) {
   return result;
 }
 
-Connectivity BuildConnectivity(const Mesh& mesh) {
+Connectivity BuildConnectivity(const Mesh &mesh) {
   Connectivity c;
   const size_t pointsCount = mesh.vertices.size();
   c.pointCells.resize(pointsCount);
   const size_t facesCount = mesh.faces.size();
   for (size_t i = 0; i < facesCount; ++i) {
-    const Mesh::Triangle& f = mesh.faces[i];
+    const Mesh::Triangle &f = mesh.faces[i];
     c.pointCells[f[0]].adjacentFaces.insert(i);
     c.pointCells[f[1]].adjacentFaces.insert(i);
     c.pointCells[f[2]].adjacentFaces.insert(i);
@@ -34,8 +34,8 @@ Connectivity BuildConnectivity(const Mesh& mesh) {
   return c;
 }
 
-std::vector<Vec3f> CalculateVertexNormals(const Mesh& mesh,
-                                          const Connectivity& connectivity) {
+std::vector<Vec3f> CalculateVertexNormals(const Mesh &mesh,
+                                          const Connectivity &connectivity) {
   const std::vector<Vec3f> faceNormals = CalculateFacesNormals(mesh);
   const size_t verticesCount = mesh.vertices.size();
   std::vector<Vec3f> normals(verticesCount);
@@ -52,10 +52,10 @@ std::vector<Vec3f> CalculateVertexNormals(const Mesh& mesh,
   return normals;
 }
 
-std::vector<Vec3f> CalculateFacesNormals(const Mesh& mesh) {
+std::vector<Vec3f> CalculateFacesNormals(const Mesh &mesh) {
   std::vector<Vec3f> faceNormals;
   faceNormals.reserve(mesh.faces.size());
-  for (const Mesh::Triangle& t : mesh.faces) {
+  for (const Mesh::Triangle &t : mesh.faces) {
     const Vec3f v0 = mesh.vertices[t[0]];
     const Vec3f v1 = mesh.vertices[t[1]];
     const Vec3f v2 = mesh.vertices[t[2]];
@@ -64,37 +64,34 @@ std::vector<Vec3f> CalculateFacesNormals(const Mesh& mesh) {
   return faceNormals;
 }
 
-void Slice(const Image3D& image, Orientation orientation, size_t index,
-           ColorImage& result) {
+void Slice(const Image3D &image, Orientation orientation, size_t index,
+           ColorImage &result, bool globalRemap) {
   TIME_BLOCK("Slicing SDF")
   switch (orientation) {
-    case Orientation::Z:
-      result.Resize(image.size[0], image.size[1]);
-      break;
+  case Orientation::Z:
+    result.Resize(image.size[0], image.size[1]);
+    break;
 
-    case Orientation::X:
-      result.Resize(image.size[1], image.size[2]);
-      break;
+  case Orientation::X:
+    result.Resize(image.size[1], image.size[2]);
+    break;
 
-    case Orientation::Y:
-      result.Resize(image.size[0], image.size[2]);
-      break;
+  case Orientation::Y:
+    result.Resize(image.size[0], image.size[2]);
+    break;
   }
-  const float range = image.max - image.min;
-  if (range == 0) {
-    std::fill(result.data.begin(), result.data.end(), Color{0, 0, 0, 255});
-    return;
-  }
-  const float slope = 255 / range;
-
+  float range = image.max - image.min;
+  if (!globalRemap) {
+    float max = -FLT_MAX;
+    float min = FLT_MAX;
 #pragma omp parallel for
-  for (int64_t y = 0; y < result.size[1]; ++y) {
-    for (int64_t x = 0; x < result.size[0]; ++x) {
-      size_t ix = index;
-      size_t iy = index;
-      size_t iz = index;
+    for (int64_t y = 0; y < result.size[1]; ++y) {
+      for (int64_t x = 0; x < result.size[0]; ++x) {
+        size_t ix = index;
+        size_t iy = index;
+        size_t iz = index;
 
-      switch (orientation) {
+        switch (orientation) {
         case Orientation::Z:
           ix = x;
           iy = y;
@@ -109,6 +106,42 @@ void Slice(const Image3D& image, Orientation orientation, size_t index,
           ix = y;
           iz = x;
           break;
+        }
+        const float p = image.At(ix, iy, iz);
+        max = std::max(max, p);
+        min = std::min(min, p);
+      }
+    }
+    range = max - min;
+  }
+  if (range == 0) {
+    std::fill(result.data.begin(), result.data.end(), Color{0, 0, 0, 255});
+    return;
+  }
+  const float slope = 255 / range;
+
+#pragma omp parallel for
+  for (int64_t y = 0; y < result.size[1]; ++y) {
+    for (int64_t x = 0; x < result.size[0]; ++x) {
+      size_t ix = index;
+      size_t iy = index;
+      size_t iz = index;
+
+      switch (orientation) {
+      case Orientation::Z:
+        ix = x;
+        iy = y;
+        break;
+
+      case Orientation::X:
+        iy = x;
+        iz = y;
+        break;
+
+      case Orientation::Y:
+        ix = y;
+        iz = x;
+        break;
       }
       const float p = image.At(ix, iy, iz);
       const uint8_t c = slope * (p - image.min);
@@ -117,7 +150,7 @@ void Slice(const Image3D& image, Orientation orientation, size_t index,
   }
 }
 
-Image3D CreateSDFGrid(const Cheese& cheese, const float min[3],
+Image3D CreateSDFGrid(const Cheese &cheese, const float min[3],
                       const float max[3], const float spacing[3]) {
   const size_t size[3] = {
       size_t((max[0] - min[0]) / spacing[0]) + 1,
@@ -151,7 +184,7 @@ Image3D CreateSDFGrid(const Cheese& cheese, const float min[3],
   return image;
 }
 
-Mesh MarchingCubes(const Image3D& image) {
+Mesh MarchingCubes(const Image3D &image) {
   constexpr int16_t edgeTable[256] = {
       0x0,   0x109, 0x203, 0x30a, 0x406, 0x50f, 0x605, 0x70c, 0x80c, 0x905,
       0xa0f, 0xb06, 0xc0a, 0xd03, 0xe09, 0xf00, 0x190, 0x99,  0x393, 0x29a,
@@ -453,7 +486,7 @@ Mesh MarchingCubes(const Image3D& image) {
 #define USE_DUPLICATE_VERTICES
   std::unordered_map<Vec3f, size_t, Vec3fHash> pointsHashTable;
 
-  auto InsertVertex = [&](const Vec3f& v) {
+  auto InsertVertex = [&](const Vec3f &v) {
 #ifdef USE_DUPLICATE_VERTICES
     size_t size = mesh.vertices.size();
     mesh.vertices.push_back(v);
@@ -470,7 +503,7 @@ Mesh MarchingCubes(const Image3D& image) {
 #endif
   };
 
-  auto SetGridPoint = [](Grid& grid, const Image3D& image, size_t i, size_t x,
+  auto SetGridPoint = [](Grid &grid, const Image3D &image, size_t i, size_t x,
                          size_t y, size_t z) {
     grid.val[i] = image.At(x, y, z);
     grid.p[i].x = image.origin[0] + x * image.spacing[0];
@@ -495,14 +528,22 @@ Mesh MarchingCubes(const Image3D& image) {
             tells us which vertices are inside of the surface
         */
         int cubeindex = 0;
-        if (grid.val[0] < isolevel) cubeindex |= 1;
-        if (grid.val[1] < isolevel) cubeindex |= 2;
-        if (grid.val[2] < isolevel) cubeindex |= 4;
-        if (grid.val[3] < isolevel) cubeindex |= 8;
-        if (grid.val[4] < isolevel) cubeindex |= 16;
-        if (grid.val[5] < isolevel) cubeindex |= 32;
-        if (grid.val[6] < isolevel) cubeindex |= 64;
-        if (grid.val[7] < isolevel) cubeindex |= 128;
+        if (grid.val[0] < isolevel)
+          cubeindex |= 1;
+        if (grid.val[1] < isolevel)
+          cubeindex |= 2;
+        if (grid.val[2] < isolevel)
+          cubeindex |= 4;
+        if (grid.val[3] < isolevel)
+          cubeindex |= 8;
+        if (grid.val[4] < isolevel)
+          cubeindex |= 16;
+        if (grid.val[5] < isolevel)
+          cubeindex |= 32;
+        if (grid.val[6] < isolevel)
+          cubeindex |= 64;
+        if (grid.val[7] < isolevel)
+          cubeindex |= 128;
 
         /* Cube is entirely in/out of the surface */
         if (edgeTable[cubeindex] == 0) {
@@ -563,8 +604,8 @@ Mesh MarchingCubes(const Image3D& image) {
   return mesh;
 }
 
-std::vector<CheeseSlice> SliceCheese(const Mesh& mesh, size_t slicesCount,
-                                     Orientation direction) {
+std::vector<CheeseSlice> Slice(const Mesh &mesh, size_t slicesCount,
+                               Orientation direction) {
   TIME_BLOCK("Slicing cheese")
   const BBox box = CalculateBBox(mesh);
   const size_t dir = size_t(direction);
@@ -577,9 +618,9 @@ std::vector<CheeseSlice> SliceCheese(const Mesh& mesh, size_t slicesCount,
   std::vector<CheeseSlice> slices(slicesCount);
 #pragma omp parallel for
   for (int i = 0; i < slicesCount; ++i) {
-    CheeseSlice& slice = slices[i];
+    CheeseSlice &slice = slices[i];
     const Vec3f plane_point = box.min + normal * step * i;
-    for (const auto& t : mesh.faces) {
+    for (const auto &t : mesh.faces) {
       const Vec3f pts[3] = {
           mesh.vertices[t[0]],
           mesh.vertices[t[1]],
