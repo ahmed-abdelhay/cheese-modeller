@@ -107,7 +107,18 @@ struct Cheese {
     }
     const float cylinderDist = PointToCylinderDistance(
         p, Vec3f{0, 0, 0}, cylinderRadius, cylinderHeight);
-    return SdfDifference(cylinderDist, poresUnion);
+    float result = SdfDifference(cylinderDist, poresUnion);
+
+    if (false) {
+      const Vec3f planePt{0, 0, 0};
+      const Vec3f plane1Normal{1, 0, 0};
+      const Vec3f plane2Normal{0, 1, 0};
+      const float d0 = PointToPlaneDistance(p, planePt, plane1Normal);
+      const float d1 = PointToPlaneDistance(p, planePt, plane2Normal);
+      const float d = SdfUnion(d0, d1);
+      result = SdfIntersection(result, d);
+    }
+    return result;
   }
 };
 

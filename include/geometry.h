@@ -217,3 +217,5 @@ float PointToCylinderDistance(const Vec3f &p, const Vec3f &center, float radius,
                               float height);
 float PointToCircleDistance(const Vec3f &p, const Vec3f &center, float radius);
 float PointToSphereDistance(const Vec3f &p, const Vec3f &center, float radius);
+float PointToPlaneDistance(const Vec3f &p, const Vec3f &planePt,
+                           const Vec3f &planeN);

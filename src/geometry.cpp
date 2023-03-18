@@ -242,3 +242,9 @@ float PointToCircleDistance(const Vec3f &p, const Vec3f &c, float radius) {
       fabs(Length2(Vec2f{p.x, p.y} - Vec2f{c.x, c.y}) - pow2(radius));
   return sqrt(dist2Circle2 + dist2Plane2);
 }
+
+float PointToPlaneDistance(const Vec3f &p, const Vec3f &planePt,
+                           const Vec3f &planeN) {
+  const float planeD = -DotProduct(planePt, planeN);
+  return DotProduct(planeN, p) + planeD;
+}
