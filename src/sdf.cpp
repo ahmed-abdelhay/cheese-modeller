@@ -80,10 +80,12 @@ void Slice(const Image3D &image, Orientation orientation, size_t index,
     result.Resize(image.size[0], image.size[2]);
     break;
   }
-  float range = image.max - image.min;
-  if (!globalRemap) {
-    float max = -FLT_MAX;
-    float min = FLT_MAX;
+  float max = -FLT_MAX;
+  float min = FLT_MAX;
+  if (globalRemap) {
+    max = image.max;
+    min = image.min;
+  } else {
 #pragma omp parallel for
     for (int64_t y = 0; y < result.size[1]; ++y) {
       for (int64_t x = 0; x < result.size[0]; ++x) {
@@ -112,8 +114,8 @@ void Slice(const Image3D &image, Orientation orientation, size_t index,
         min = std::min(min, p);
       }
     }
-    range = max - min;
   }
+  const float range = max - min;
   if (range == 0) {
     std::fill(result.data.begin(), result.data.end(), Color{0, 0, 0, 255});
     return;
@@ -144,7 +146,7 @@ void Slice(const Image3D &image, Orientation orientation, size_t index,
         break;
       }
       const float p = image.At(ix, iy, iz);
-      const uint8_t c = slope * (p - image.min);
+      const uint8_t c = slope * (p - min);
       result.At(x, y) = Color{c, c, c, 255};
     }
   }
